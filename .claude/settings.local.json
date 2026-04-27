@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-react-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx react-scripts:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(netstat -ano)",
+      "Bash(grep -E LISTENING.*:300[0-9])",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \"300\")",
+      "Bash(findstr \"3005\")",
+      "Bash(npx create-expo-app@latest MindForgeApp --template blank-typescript)",
+      "Bash(npx expo:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
