@@ -6,9 +6,11 @@ export function formatDate(date: string): string {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function calculateXP(score: number, maxScore: number, difficulty: string): number {
-  const base = Math.round((score / maxScore) * 100);
-  const multiplier = difficulty === 'hard' ? 1.5 : difficulty === 'medium' ? 1.2 : 1;
+/** XP scales with performance and the adaptive difficulty level (1–10). */
+export function calculateXP(score: number, maxScore: number, level: number): number {
+  if (maxScore <= 0) return 0;
+  const base = (score / maxScore) * 100;
+  const multiplier = 0.8 + level * 0.12; // ~0.9x at level 1 → 2x at level 10
   return Math.round(base * multiplier);
 }
 

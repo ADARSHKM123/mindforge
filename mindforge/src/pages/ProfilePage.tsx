@@ -1,298 +1,154 @@
 import React, { useState } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useNavigate } from 'react-router-dom';
+import { Moon, Sun, Sparkles, Trash2, Check } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import Card from '../components/common/Card';
-import ProgressRing from '../components/common/ProgressRing';
-import { categoryInfo } from '../data/games';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { useTheme } from '../contexts/ThemeContext';
+import { formatDate } from '../utils/helpers';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
-type TimeRange = '7d' | '30d' | 'all';
+const goalOptions = [3, 5, 10];
 
 const ProfilePage: React.FC = () => {
-  const { colors, theme, toggleTheme } = useTheme();
-  const { user, progressHistory, updateUser } = useUser();
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+  const navigate = useNavigate();
+  const { user, updateUser, resetAllData } = useUser();
+  const { theme, toggleTheme } = useTheme();
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const initials = user.name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const xpProgress = user.xpToNextLevel > 0
-    ? ((user.xp % user.xpToNextLevel) / user.xpToNextLevel) * 100
-    : 0;
-
-  // Filter progress by time range
-  const now = new Date();
-  const filteredProgress = progressHistory.filter(p => {
-    const d = new Date(p.date);
-    const diff = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
-    if (timeRange === '7d') return diff <= 7;
-    if (timeRange === '30d') return diff <= 30;
-    return true;
-  });
-
-  // Chart data
-  const chartData = filteredProgress.map(p => ({
-    date: new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    score: p.gamesPlayed > 0 ? Math.round(p.totalScore / p.gamesPlayed * 10) : 0,
-    games: p.gamesPlayed,
-    xp: p.totalXP,
-  }));
-
-  // Skill radar data
-  const skillData = Object.entries(user.skillLevels).map(([key, value]) => ({
-    skill: categoryInfo[key]?.name || key,
-    level: Math.round(value * 10) / 10,
-    color: categoryInfo[key]?.color || '#666',
-    icon: categoryInfo[key]?.icon || '',
-  }));
-
-  // Stats summary
-  const totalStats = {
-    games: filteredProgress.reduce((s, p) => s + p.gamesPlayed, 0),
-    xp: filteredProgress.reduce((s, p) => s + p.totalXP, 0),
-    minutes: Math.round(filteredProgress.reduce((s, p) => s + p.timeSpent, 0) / 60),
-  };
-
-  const avatars = ['🧠', '🦁', '🦊', '🐱', '🐶', '🦉', '🐼', '🦈', '🚀', '⚡', '🌟', '🔥'];
+    ? Math.min(1, (user.xp - 0) / (user.xp + user.xpToNextLevel)) : 0;
 
   return (
-    <div style={{ padding: '24px 16px 90px', maxWidth: '480px', margin: '0 auto' }}>
-      {/* Profile Header */}
-      <Card gradient={colors.gradient1} style={{ marginBottom: '20px', color: '#fff', textAlign: 'center' }}
-        padding="24px">
-        <div style={{
-          width: '72px', height: '72px', borderRadius: '50%',
-          background: 'rgba(255,255,255,0.2)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', fontSize: '36px',
-          margin: '0 auto 12px', border: '3px solid rgba(255,255,255,0.4)',
-        }}>
-          {user.avatar}
-        </div>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 4px' }}>{user.name}</h1>
-        <p style={{ fontSize: '14px', opacity: 0.85, margin: '0 0 16px' }}>Level {user.level} Learner</p>
+    <div className="page" style={{ maxWidth: 640 }}>
+      <header className="page-header">
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Account</p>
+        <h1 className="page-title">Profile</h1>
+      </header>
 
-        <ProgressRing progress={xpProgress} size={64} strokeWidth={5} color="#fff" bgColor="rgba(255,255,255,0.25)">
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{Math.round(xpProgress)}%</span>
-        </ProgressRing>
-        <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '8px' }}>
-          {user.xp} XP · {user.xpToNextLevel - (user.xp % user.xpToNextLevel)} to next level
-        </p>
+      {/* Identity */}
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16,
+            background: 'linear-gradient(135deg, var(--accent), #7C5AF5)',
+            color: '#FFFFFF', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: 20, fontWeight: 700, flexShrink: 0,
+            boxShadow: 'var(--glow-accent)',
+          }}>
+            {initials}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ fontSize: 18 }}>{user.name}</h2>
+              {user.isPro && <span className="badge badge-pro">PRO</span>}
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              Member since {formatDate(user.joinDate)}
+            </p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div className="stat-value" style={{ fontSize: 20 }}>Lv {user.level}</div>
+            <div className="stat-label">{user.xpToNextLevel} XP to next</div>
+          </div>
+        </div>
+        <div className="progress-track" style={{ marginTop: 14 }}>
+          <div className="progress-fill" style={{ width: `${Math.round(xpProgress * 100)}%` }} />
+        </div>
       </Card>
 
-      {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 16 }}>
         {[
-          { value: user.streak, label: 'Streak', icon: '🔥' },
-          { value: user.totalGamesPlayed, label: 'Games', icon: '🎮' },
-          { value: user.level, label: 'Level', icon: '⭐' },
-          { value: user.totalTrainingMinutes, label: 'Minutes', icon: '⏱️' },
-        ].map(stat => (
-          <Card key={stat.label} style={{ textAlign: 'center' }} padding="10px">
-            <p style={{ fontSize: '10px', margin: '0 0 2px' }}>{stat.icon}</p>
-            <p style={{ fontSize: '18px', fontWeight: 800, color: colors.primary, margin: '0 0 2px' }}>{stat.value}</p>
-            <p style={{ fontSize: '10px', color: colors.textSecondary, margin: 0 }}>{stat.label}</p>
+          { value: user.totalGamesPlayed, label: 'Sessions' },
+          { value: user.totalTrainingMinutes, label: 'Minutes trained' },
+          { value: user.longestStreak, label: 'Longest streak' },
+          { value: user.achievements.length, label: 'Achievements' },
+        ].map(s => (
+          <Card key={s.label} style={{ padding: 16, textAlign: 'center' }}>
+            <div className="stat-value" style={{ fontSize: 20 }}>{s.value}</div>
+            <div className="stat-label">{s.label}</div>
           </Card>
         ))}
       </div>
 
-      {/* Time Range Selector */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        {(['7d', '30d', 'all'] as TimeRange[]).map(range => (
-          <button key={range} onClick={() => setTimeRange(range)}
-            style={{
-              flex: 1, padding: '8px', borderRadius: '8px', border: 'none',
-              background: timeRange === range ? colors.primary : colors.bgTertiary,
-              color: timeRange === range ? '#fff' : colors.textSecondary,
-              fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-            }}>
-            {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : 'All Time'}
-          </button>
-        ))}
-      </div>
+      {/* Settings */}
+      <Card style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 16 }}>Settings</h2>
 
-      {/* Period Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-        <Card style={{ textAlign: 'center' }} padding="12px">
-          <p style={{ fontSize: '20px', fontWeight: 800, color: colors.accent, margin: '0 0 2px' }}>{totalStats.games}</p>
-          <p style={{ fontSize: '11px', color: colors.textSecondary, margin: 0 }}>Games</p>
-        </Card>
-        <Card style={{ textAlign: 'center' }} padding="12px">
-          <p style={{ fontSize: '20px', fontWeight: 800, color: colors.warning, margin: '0 0 2px' }}>{totalStats.xp}</p>
-          <p style={{ fontSize: '11px', color: colors.textSecondary, margin: 0 }}>XP</p>
-        </Card>
-        <Card style={{ textAlign: 'center' }} padding="12px">
-          <p style={{ fontSize: '20px', fontWeight: 800, color: colors.error, margin: '0 0 2px' }}>{totalStats.minutes}</p>
-          <p style={{ fontSize: '11px', color: colors.textSecondary, margin: 0 }}>Minutes</p>
-        </Card>
-      </div>
-
-      {/* Progress Chart */}
-      {chartData.length > 0 && (
-        <Card style={{ marginBottom: '20px' }} padding="16px">
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: colors.text, margin: '0 0 12px' }}>
-            Activity
-          </h3>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={chartData}>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: colors.textSecondary }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip
-                contentStyle={{
-                  background: colors.card, border: `1px solid ${colors.border}`,
-                  borderRadius: '8px', fontSize: '12px', color: colors.text,
-                }}
-              />
-              <Bar dataKey="games" fill={colors.primary} radius={[4, 4, 0, 0]} name="Games" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
-
-      {/* XP Chart */}
-      {chartData.length > 1 && (
-        <Card style={{ marginBottom: '20px' }} padding="16px">
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: colors.text, margin: '0 0 12px' }}>
-            XP Progress
-          </h3>
-          <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: colors.textSecondary }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip
-                contentStyle={{
-                  background: colors.card, border: `1px solid ${colors.border}`,
-                  borderRadius: '8px', fontSize: '12px', color: colors.text,
-                }}
-              />
-              <Line type="monotone" dataKey="xp" stroke={colors.accent} strokeWidth={2} dot={{ fill: colors.accent, r: 3 }} name="XP" />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
-
-      {/* Skill Levels */}
-      <Card style={{ marginBottom: '20px' }} padding="16px">
-        <h3 style={{ fontSize: '15px', fontWeight: 700, color: colors.text, margin: '0 0 16px' }}>
-          Skill Levels
-        </h3>
-        {skillData.map(skill => (
-          <div key={skill.skill} style={{
-            display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px',
-          }}>
-            <span style={{ fontSize: '20px', width: '28px' }}>{skill.icon}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600, color: colors.text }}>{skill.skill}</span>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: skill.color }}>
-                  {skill.level.toFixed(1)} / 10
-                </span>
-              </div>
-              <div style={{ height: '8px', borderRadius: '4px', background: colors.bgTertiary }}>
-                <div style={{
-                  height: '100%', borderRadius: '4px', background: skill.color,
-                  width: `${(skill.level / 10) * 100}%`, transition: 'width 0.6s ease',
-                }} />
-              </div>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div>
+            <p style={{ fontSize: 14.5, fontWeight: 600 }}>Appearance</p>
+            <p style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{theme === 'dark' ? 'Dark' : 'Light'} theme</p>
           </div>
-        ))}
+          <Button variant="secondary" size="sm" onClick={toggleTheme}>
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </Button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ fontSize: 14.5, fontWeight: 600 }}>Daily goal</p>
+            <p style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>Sessions per day</p>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {goalOptions.map(g => (
+              <button
+                key={g}
+                className={`badge ${user.dailyGoal === g ? 'badge-accent' : ''}`}
+                style={{ cursor: 'pointer', border: 'none', padding: '7px 14px', fontSize: 13 }}
+                onClick={() => updateUser({ dailyGoal: g })}
+              >
+                {user.dailyGoal === g && <Check size={12} />} {g}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
 
-      {/* Achievements */}
-      <Card style={{ marginBottom: '20px' }} padding="16px">
-        <h3 style={{ fontSize: '15px', fontWeight: 700, color: colors.text, margin: '0 0 16px' }}>
-          Achievements ({user.achievements.length})
-        </h3>
-        {user.achievements.length === 0 ? (
-          <p style={{ fontSize: '13px', color: colors.textSecondary, textAlign: 'center', padding: '16px 0' }}>
-            Play games to unlock achievements! 🏆
+      {/* Subscription */}
+      <Card style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Subscription</h2>
+        {user.isPro ? (
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+            <Sparkles size={14} color="var(--warning)" style={{ verticalAlign: -2, marginRight: 6 }} />
+            You're on <strong style={{ color: 'var(--text-primary)' }}>MindForge Pro</strong> — every exercise, the full workout and complete analytics are unlocked.
           </p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {user.achievements.map(a => (
-              <div key={a.id} style={{
-                padding: '12px', borderRadius: '10px', background: colors.bgTertiary, textAlign: 'center',
-              }}>
-                <span style={{ fontSize: '24px' }}>{a.icon}</span>
-                <p style={{ fontSize: '12px', fontWeight: 700, color: colors.text, margin: '4px 0 2px' }}>{a.title}</p>
-                <p style={{ fontSize: '10px', color: colors.textSecondary, margin: 0 }}>{a.description}</p>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
+              Free plan — {`3-game workout, ${13} of 25 exercises`}
+            </p>
+            <Button size="sm" onClick={() => navigate('/pro')}>
+              <Sparkles size={13} /> Upgrade
+            </Button>
           </div>
         )}
       </Card>
 
-      {/* Settings Section */}
-      <Card padding="16px">
-        <h3 style={{ fontSize: '15px', fontWeight: 700, color: colors.text, margin: '0 0 16px' }}>
-          Settings
-        </h3>
-
-        {/* Avatar Selection */}
-        <div style={{ marginBottom: '16px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: colors.textSecondary, margin: '0 0 8px' }}>Avatar</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {avatars.map(a => (
-              <button key={a} onClick={() => updateUser({ avatar: a })}
-                style={{
-                  width: '40px', height: '40px', borderRadius: '10px', border: 'none',
-                  background: user.avatar === a ? `${colors.primary}20` : colors.bgTertiary,
-                  fontSize: '20px', cursor: 'pointer',
-                  outline: user.avatar === a ? `2px solid ${colors.primary}` : 'none',
-                }}>
-                {a}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Daily Goal */}
-        <div style={{ marginBottom: '16px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: colors.textSecondary, margin: '0 0 8px' }}>
-            Daily Goal: {user.dailyGoal} games
-          </p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {[3, 5, 7, 10].map(goal => (
-              <button key={goal} onClick={() => updateUser({ dailyGoal: goal })}
-                style={{
-                  flex: 1, padding: '8px', borderRadius: '8px', border: 'none',
-                  background: user.dailyGoal === goal ? colors.primary : colors.bgTertiary,
-                  color: user.dailyGoal === goal ? '#fff' : colors.textSecondary,
-                  fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                }}>
-                {goal}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Theme Toggle */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '12px 0', borderTop: `1px solid ${colors.border}`,
-        }}>
-          <div>
-            <p style={{ fontSize: '14px', fontWeight: 600, color: colors.text, margin: '0 0 2px' }}>
-              {theme === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+      {/* Danger zone */}
+      <Card>
+        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Data</h2>
+        {!confirmReset ? (
+          <Button variant="secondary" size="sm" style={{ color: 'var(--error)' }} onClick={() => setConfirmReset(true)}>
+            <Trash2 size={14} /> Reset all progress
+          </Button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <p style={{ fontSize: 13.5, color: 'var(--error)', fontWeight: 600 }}>
+              This permanently deletes all progress. Are you sure?
             </p>
-            <p style={{ fontSize: '12px', color: colors.textSecondary, margin: 0 }}>
-              Toggle appearance
-            </p>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmReset(false)}>Cancel</Button>
+            <Button size="sm" style={{ background: 'var(--error)' }} onClick={resetAllData}>Yes, reset</Button>
           </div>
-          <button
-            onClick={toggleTheme}
-            style={{
-              width: '52px', height: '28px', borderRadius: '14px', border: 'none',
-              background: theme === 'dark' ? colors.primary : colors.bgTertiary,
-              position: 'relative', cursor: 'pointer', transition: 'background 0.3s',
-            }}
-          >
-            <div style={{
-              width: '22px', height: '22px', borderRadius: '50%', background: '#fff',
-              position: 'absolute', top: '3px',
-              left: theme === 'dark' ? '27px' : '3px',
-              transition: 'left 0.3s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} />
-          </button>
-        </div>
+        )}
       </Card>
     </div>
   );

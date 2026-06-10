@@ -3,7 +3,6 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  avatar: string;
   joinDate: string;
   level: number;
   xp: number;
@@ -16,6 +15,9 @@ export interface UserProfile {
   achievements: Achievement[];
   dailyGoal: number; // games per day
   onboardingComplete: boolean;
+  isPro: boolean;
+  focusAreas: SkillCategory[]; // chosen during onboarding
+  gameRatings: Record<string, GameRating>;
 }
 
 export interface SkillLevels {
@@ -29,26 +31,35 @@ export interface SkillLevels {
 
 export type SkillCategory = keyof SkillLevels;
 
+// Adaptive difficulty rating for a single game (level 1–10, continuous)
+export interface GameRating {
+  level: number;
+  plays: number;
+  lastPlayed: string;
+  recentAccuracy: number[]; // last few accuracy values, 0–1
+}
+
 export interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: string;
   unlockedAt?: string;
   requirement: number;
   type: 'games_played' | 'streak' | 'level' | 'perfect_score' | 'category_master';
 }
 
 // ===== Game Types =====
+export type GameMode = 'quiz' | 'memory-board' | 'sequence';
+
 export interface GameConfig {
   id: string;
   title: string;
   description: string;
+  benefit: string; // what cognitive skill it trains, shown on intro
   category: SkillCategory;
-  icon: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  mode: GameMode;
   duration: number; // seconds
-  color: string;
+  proOnly: boolean;
 }
 
 export interface GameResult {
@@ -56,19 +67,27 @@ export interface GameResult {
   category: SkillCategory;
   score: number;
   maxScore: number;
-  accuracy: number;
-  timeSpent: number;
+  accuracy: number; // 0–100
+  timeSpent: number; // seconds
+  avgResponseMs: number;
   date: string;
   xpEarned: number;
 }
 
-export interface GameState {
-  status: 'idle' | 'playing' | 'paused' | 'completed';
-  currentQuestion: number;
-  totalQuestions: number;
+// Summary passed from a game engine to the host on completion
+export interface SessionSummary {
   score: number;
-  timeRemaining: number;
-  answers: { correct: boolean; timeSpent: number }[];
+  maxScore: number;
+  accuracy: number; // 0–1
+  avgResponseMs: number;
+  timeSpent: number; // seconds
+}
+
+// ===== Workout Types =====
+export interface DailyWorkout {
+  date: string;
+  gameIds: string[];
+  completed: string[];
 }
 
 // ===== Vocabulary Types =====

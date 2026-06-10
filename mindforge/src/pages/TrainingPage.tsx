@@ -1,149 +1,107 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../contexts/ThemeContext';
-import { useUser } from '../contexts/UserContext';
-import Card from '../components/common/Card';
+import { Lock, Gauge } from 'lucide-react';
 import { gameConfigs, categoryInfo } from '../data/games';
+import { useUser } from '../contexts/UserContext';
+import { difficultyOf } from '../core/adaptive';
 import { SkillCategory } from '../types';
+import Card from '../components/ui/Card';
+import CategoryIcon from '../components/ui/CategoryIcon';
+import Reveal from '../components/ui/Reveal';
+
+const categories = Object.keys(categoryInfo) as SkillCategory[];
 
 const TrainingPage: React.FC = () => {
-  const { colors } = useTheme();
-  const { user } = useUser();
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<SkillCategory | 'all'>('all');
+  const { user } = useUser();
+  const [filter, setFilter] = useState<SkillCategory | 'all'>('all');
 
-  const categories = Object.entries(categoryInfo);
-  const filteredGames = selectedCategory === 'all'
-    ? gameConfigs
-    : gameConfigs.filter(g => g.category === selectedCategory);
+  const visible = filter === 'all' ? gameConfigs : gameConfigs.filter(g => g.category === filter);
+  const grouped = categories
+    .map(cat => ({ cat, games: visible.filter(g => g.category === cat) }))
+    .filter(group => group.games.length > 0);
 
   return (
-    <div style={{ padding: '24px 16px 90px', maxWidth: '480px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: 800, color: colors.text, margin: '0 0 4px' }}>
-        Training
-      </h1>
-      <p style={{ fontSize: '14px', color: colors.textSecondary, margin: '0 0 20px' }}>
-        Choose a category to start training
-      </p>
+    <div className="page">
+      <Reveal onScroll={false}>
+        <header className="page-header">
+          <p className="eyebrow" style={{ marginBottom: 8 }}>Exercise library</p>
+          <h1 className="page-title">Training</h1>
+          <p className="page-subtitle">{gameConfigs.length} exercises across {categories.length} cognitive skills — difficulty adapts to you.</p>
+        </header>
+      </Reveal>
 
-      {/* Category Filter */}
-      <div style={{
-        display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '20px',
-        scrollbarWidth: 'none',
-      }}>
+      {/* Category filter */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
         <button
-          onClick={() => setSelectedCategory('all')}
-          style={{
-            padding: '8px 16px', borderRadius: '20px', border: 'none',
-            background: selectedCategory === 'all' ? colors.primary : colors.bgTertiary,
-            color: selectedCategory === 'all' ? '#fff' : colors.textSecondary,
-            fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-            transition: 'all 0.2s',
-          }}
+          className={`badge ${filter === 'all' ? 'badge-accent' : ''}`}
+          style={{ cursor: 'pointer', border: 'none', padding: '7px 14px', fontSize: 13 }}
+          onClick={() => setFilter('all')}
         >
-          All Games
+          All
         </button>
-        {categories.map(([key, info]) => (
+        {categories.map(cat => (
           <button
-            key={key}
-            onClick={() => setSelectedCategory(key as SkillCategory)}
-            style={{
-              padding: '8px 16px', borderRadius: '20px', border: 'none',
-              background: selectedCategory === key ? info.color : colors.bgTertiary,
-              color: selectedCategory === key ? '#fff' : colors.textSecondary,
-              fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-              transition: 'all 0.2s',
-            }}
+            key={cat}
+            className={`badge ${filter === cat ? 'badge-accent' : ''}`}
+            style={{ cursor: 'pointer', border: 'none', padding: '7px 14px', fontSize: 13 }}
+            onClick={() => setFilter(filter === cat ? 'all' : cat)}
           >
-            {info.icon} {info.name}
+            <CategoryIcon category={cat} size={13} />
+            {categoryInfo[cat].name}
           </button>
         ))}
       </div>
 
-      {/* Category Cards (when All is selected) */}
-      {selectedCategory === 'all' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-          {categories.map(([key, info]) => {
-            const level = user.skillLevels[key as SkillCategory];
-            return (
-              <Card
-                key={key}
-                onClick={() => setSelectedCategory(key as SkillCategory)}
-                padding="14px"
-                style={{ position: 'relative', overflow: 'hidden' }}
-              >
-                <div style={{
-                  position: 'absolute', top: '-15px', right: '-15px',
-                  width: '60px', height: '60px', borderRadius: '50%',
-                  background: info.color, opacity: 0.12,
-                }} />
-                <span style={{ fontSize: '32px' }}>{info.icon}</span>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: colors.text, margin: '8px 0 2px' }}>
-                  {info.name}
-                </h3>
-                <p style={{ fontSize: '11px', color: colors.textSecondary, margin: '0 0 8px', lineHeight: 1.3 }}>
-                  {info.description}
-                </p>
-                <div style={{
-                  height: '4px', borderRadius: '2px', background: colors.bgTertiary,
-                }}>
-                  <div style={{
-                    height: '100%', borderRadius: '2px', background: info.color,
-                    width: `${(level / 10) * 100}%`, transition: 'width 0.4s ease',
-                  }} />
-                </div>
-                <p style={{ fontSize: '10px', color: info.color, fontWeight: 600, margin: '4px 0 0' }}>
-                  Level {Math.floor(level)}
-                </p>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Game List */}
-      <h2 style={{ fontSize: '18px', fontWeight: 700, color: colors.text, margin: '0 0 12px' }}>
-        {selectedCategory === 'all' ? 'All Games' : `${categoryInfo[selectedCategory].name} Games`}
-      </h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {filteredGames.map(game => (
-          <Card key={game.id} onClick={() => navigate(`/play/${game.id}`)} padding="14px">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '14px',
-                background: `${game.color}18`, display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: '26px',
-                flexShrink: 0,
-              }}>
-                {game.icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: colors.text, margin: '0 0 3px' }}>
-                  {game.title}
-                </h3>
-                <p style={{ fontSize: '12px', color: colors.textSecondary, margin: 0 }}>
-                  {game.description}
-                </p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{
-                  fontSize: '10px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px',
-                  background: game.difficulty === 'hard' ? `${colors.error}20` :
-                    game.difficulty === 'medium' ? `${colors.warning}20` : `${colors.success}20`,
-                  color: game.difficulty === 'hard' ? colors.error :
-                    game.difficulty === 'medium' ? colors.warning : colors.success,
-                  textTransform: 'capitalize',
-                }}>
-                  {game.difficulty}
-                </span>
-                <p style={{ fontSize: '11px', color: colors.textTertiary, margin: '4px 0 0' }}>
-                  {game.duration}s
-                </p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {grouped.map(({ cat, games }) => (
+        <Reveal key={cat}>
+        <section style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+            <h2 style={{ fontSize: 17 }}>{categoryInfo[cat].name}</h2>
+            <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>{categoryInfo[cat].description}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+            {games.map(game => {
+              const locked = game.proOnly && !user.isPro;
+              const level = difficultyOf(user.gameRatings[game.id]);
+              const plays = user.gameRatings[game.id]?.plays ?? 0;
+              return (
+                <Card
+                  key={game.id}
+                  interactive
+                  onClick={() => navigate(`/play/${game.id}`)}
+                  style={{ padding: 16, opacity: locked ? 0.75 : 1 }}
+                >
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <CategoryIcon category={game.category} boxed boxSize={42} size={19} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <h3 style={{ fontSize: 15 }}>{game.title}</h3>
+                        {locked && <Lock size={13} color="var(--warning)" />}
+                      </div>
+                      <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.45 }}>
+                        {game.description}
+                      </p>
+                      <div style={{ display: 'flex', gap: 12, marginTop: 8, alignItems: 'center' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                          <Gauge size={12} /> Lv {level}
+                        </span>
+                        {plays > 0 && (
+                          <span style={{ fontSize: 11.5, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                            {plays} session{plays > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {locked && <span className="badge badge-pro" style={{ fontSize: 10, padding: '1px 8px' }}>PRO</span>}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+        </Reveal>
+      ))}
     </div>
   );
 };

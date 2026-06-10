@@ -1,176 +1,185 @@
 import React, { useState } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BrainCircuit, ArrowRight, Check } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
-import Button from '../common/Button';
+import { categoryInfo } from '../../data/games';
+import { SkillCategory } from '../../types';
+import Button from '../ui/Button';
+import CategoryIcon from '../ui/CategoryIcon';
 
-const steps = [
-  {
-    icon: '🧠',
-    title: 'Welcome to MindForge',
-    subtitle: 'Your personal cognitive training companion',
-    description: 'Train your brain daily with scientifically-designed exercises that improve memory, focus, math skills, and more.',
-  },
-  {
-    icon: '📊',
-    title: 'Track Your Progress',
-    subtitle: 'Watch yourself improve over time',
-    description: 'Detailed analytics show your strengths and areas for growth. Set daily goals and build streaks to stay motivated.',
-  },
-  {
-    icon: '📚',
-    title: 'Daily Vocabulary',
-    subtitle: 'Learn new words every day',
-    description: 'Expand your vocabulary with curated words, definitions, and spaced repetition to ensure long-term retention.',
-  },
-  {
-    icon: '🏆',
-    title: 'Earn Achievements',
-    subtitle: 'Challenge yourself and level up',
-    description: 'Unlock achievements, earn XP, and compete with yourself. Every session makes you sharper.',
-  },
+const categories = Object.keys(categoryInfo) as SkillCategory[];
+const goalOptions = [
+  { value: 3, label: '3 sessions', sub: 'Casual — about 5 min/day' },
+  { value: 5, label: '5 sessions', sub: 'Regular — about 10 min/day' },
+  { value: 10, label: '10 sessions', sub: 'Serious — about 20 min/day' },
 ];
 
+const steps = ['welcome', 'name', 'focus', 'goal'] as const;
+type Step = typeof steps[number];
+
 const Onboarding: React.FC = () => {
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
-  const { colors } = useTheme();
   const { completeOnboarding } = useUser();
+  const [step, setStep] = useState<Step>('welcome');
+  const [name, setName] = useState('');
+  const [focusAreas, setFocusAreas] = useState<SkillCategory[]>([]);
+  const [goal, setGoal] = useState(3);
 
-  const isLastStep = step === steps.length;
+  const stepIndex = steps.indexOf(step);
+  const next = () => setStep(steps[Math.min(stepIndex + 1, steps.length - 1)]);
 
-  const handleComplete = () => {
-    if (name.trim()) {
-      completeOnboarding(name.trim());
-    }
-  };
+  const toggleFocus = (cat: SkillCategory) =>
+    setFocusAreas(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+
+  const finish = () => completeOnboarding(name.trim() || 'Player', focusAreas, goal);
 
   return (
     <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px',
-      background: colors.bg,
+      minHeight: '100vh', background: 'var(--bg)', display: 'flex',
+      flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24,
+      position: 'relative', overflow: 'hidden',
     }}>
-      {!isLastStep ? (
-        <>
-          <div style={{
-            fontSize: '80px',
-            marginBottom: '32px',
-            animation: 'bounce 1s ease-in-out',
-          }}>
-            {steps[step].icon}
-          </div>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: 800,
-            color: colors.text,
-            textAlign: 'center',
-            marginBottom: '8px',
-          }}>
-            {steps[step].title}
-          </h1>
-          <p style={{
-            fontSize: '16px',
-            color: colors.primary,
-            fontWeight: 600,
-            textAlign: 'center',
-            marginBottom: '16px',
-          }}>
-            {steps[step].subtitle}
-          </p>
-          <p style={{
-            fontSize: '15px',
-            color: colors.textSecondary,
-            textAlign: 'center',
-            maxWidth: '320px',
-            lineHeight: 1.6,
-            marginBottom: '48px',
-          }}>
-            {steps[step].description}
-          </p>
+      {/* Ambient floating orb */}
+      <div className="orb" style={{ width: 340, height: 340, top: '-90px', right: '-70px', opacity: 0.75 }} />
+      <div className="orb" style={{ width: 220, height: 220, bottom: '-60px', left: '-50px', opacity: 0.45, animationDelay: '-4.5s' }} />
 
-          {/* Dots */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '32px' }}>
-            {steps.map((_, i) => (
-              <div key={i} style={{
-                width: i === step ? '24px' : '8px',
-                height: '8px',
-                borderRadius: '4px',
-                background: i === step ? colors.primary : colors.border,
-                transition: 'all 0.3s ease',
-              }} />
-            ))}
-          </div>
+      {/* Step dots */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 40, position: 'relative' }}>
+        {steps.map((s, i) => (
+          <div key={s} style={{
+            width: i === stepIndex ? 24 : 8, height: 8, borderRadius: 4,
+            background: i <= stepIndex ? 'var(--accent)' : 'var(--bg-subtle)',
+            boxShadow: i === stepIndex ? 'var(--glow-accent)' : 'none',
+            transition: 'all 300ms',
+          }} />
+        ))}
+      </div>
 
-          <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '320px' }}>
-            {step > 0 && (
-              <Button variant="secondary" onClick={() => setStep(step - 1)} fullWidth>
-                Back
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -16 }}
+          transition={{ duration: 0.25 }}
+          style={{ width: '100%', maxWidth: 420, textAlign: 'center' }}
+        >
+          {step === 'welcome' && (
+            <>
+              <div style={{
+                width: 72, height: 72, borderRadius: 20,
+                background: 'linear-gradient(135deg, var(--accent), #7C5AF5)',
+                color: '#FFFFFF', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', margin: '0 auto 28px',
+                boxShadow: 'var(--glow-accent-strong)',
+              }}>
+                <BrainCircuit size={34} />
+              </div>
+              <p className="eyebrow" style={{ marginBottom: 12 }}>Adaptive brain training</p>
+              <h1 className="display-hero" style={{ marginBottom: 16 }}>
+                Forge a<br />
+                <span style={{
+                  background: 'linear-gradient(110deg, var(--accent), #9B7CF8)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}>
+                  sharper mind
+                </span>
+              </h1>
+              <p className="text-secondary" style={{ fontSize: 15.5, lineHeight: 1.6, marginBottom: 36 }}>
+                A few focused minutes a day. Adaptive exercises for memory, focus, speed, math, reading and vocabulary — built to push you exactly where you need it.
+              </p>
+              <Button size="lg" fullWidth onClick={next}>
+                Get started <ArrowRight size={16} />
               </Button>
-            )}
-            <Button onClick={() => setStep(step + 1)} fullWidth size="large">
-              {step === steps.length - 1 ? "Let's Go!" : 'Next'}
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{ fontSize: '64px', marginBottom: '24px' }}>👋</div>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: 800,
-            color: colors.text,
-            textAlign: 'center',
-            marginBottom: '8px',
-          }}>
-            What's your name?
-          </h1>
-          <p style={{
-            fontSize: '15px',
-            color: colors.textSecondary,
-            textAlign: 'center',
-            marginBottom: '32px',
-          }}>
-            We'll personalize your experience
-          </p>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name"
-            onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) handleComplete(); }}
-            style={{
-              width: '100%',
-              maxWidth: '320px',
-              padding: '16px 20px',
-              fontSize: '18px',
-              borderRadius: '12px',
-              border: `2px solid ${colors.border}`,
-              background: colors.bgSecondary,
-              color: colors.text,
-              outline: 'none',
-              textAlign: 'center',
-              fontFamily: 'inherit',
-              marginBottom: '24px',
-              transition: 'border-color 0.2s',
-            }}
-            onFocus={(e) => e.target.style.borderColor = colors.primary}
-            onBlur={(e) => e.target.style.borderColor = colors.border}
-            autoFocus
-          />
-          <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '320px' }}>
-            <Button variant="secondary" onClick={() => setStep(step - 1)} fullWidth>
-              Back
-            </Button>
-            <Button onClick={handleComplete} fullWidth size="large" disabled={!name.trim()}>
-              Start Training
-            </Button>
-          </div>
-        </>
-      )}
+            </>
+          )}
+
+          {step === 'name' && (
+            <>
+              <h1 style={{ fontSize: 24, marginBottom: 8 }}>What should we call you?</h1>
+              <p className="text-secondary" style={{ marginBottom: 28 }}>Used for your profile and daily greeting.</p>
+              <input
+                className="input"
+                autoFocus
+                placeholder="Your name"
+                value={name}
+                maxLength={30}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && name.trim() && next()}
+                style={{ marginBottom: 20, textAlign: 'center', fontSize: 17 }}
+              />
+              <Button size="lg" fullWidth disabled={!name.trim()} onClick={next}>
+                Continue <ArrowRight size={16} />
+              </Button>
+            </>
+          )}
+
+          {step === 'focus' && (
+            <>
+              <h1 style={{ fontSize: 24, marginBottom: 8 }}>What do you want to improve?</h1>
+              <p className="text-secondary" style={{ marginBottom: 28 }}>Pick any — your daily workout will prioritize these.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
+                {categories.map(cat => {
+                  const active = focusAreas.includes(cat);
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => toggleFocus(cat)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+                        borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                        border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                        background: active ? 'var(--accent-soft)' : 'var(--card)',
+                        transition: 'all 150ms',
+                      }}
+                    >
+                      <CategoryIcon category={cat} size={17} />
+                      <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{categoryInfo[cat].name}</span>
+                      {active && <Check size={15} color="var(--accent)" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button size="lg" fullWidth onClick={next}>
+                {focusAreas.length > 0 ? 'Continue' : 'Skip — train everything'} <ArrowRight size={16} />
+              </Button>
+            </>
+          )}
+
+          {step === 'goal' && (
+            <>
+              <h1 style={{ fontSize: 24, marginBottom: 8 }}>Set your daily goal</h1>
+              <p className="text-secondary" style={{ marginBottom: 28 }}>Consistency beats intensity — you can change this anytime.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+                {goalOptions.map(opt => {
+                  const active = goal === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setGoal(opt.value)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '14px 18px', borderRadius: 12, cursor: 'pointer',
+                        border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                        background: active ? 'var(--accent-soft)' : 'var(--card)',
+                        transition: 'all 150ms',
+                      }}
+                    >
+                      <div style={{ textAlign: 'left' }}>
+                        <p style={{ fontSize: 15, fontWeight: 700 }}>{opt.label}</p>
+                        <p style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{opt.sub}</p>
+                      </div>
+                      {active && <Check size={17} color="var(--accent)" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button size="lg" fullWidth onClick={finish}>
+                Start training <ArrowRight size={16} />
+              </Button>
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

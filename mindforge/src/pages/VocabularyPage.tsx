@@ -1,291 +1,187 @@
 import React, { useState } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { Pin, Volume2, RotateCw } from 'lucide-react';
 import { useVocabulary } from '../contexts/VocabularyContext';
-import Card from '../components/common/Card';
-import Button from '../components/common/Button';
 import { VocabularyWord } from '../types';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
-type Tab = 'today' | 'pinned' | 'review' | 'all';
+type Tab = 'today' | 'review' | 'all';
 
-const VocabularyPage: React.FC = () => {
-  const { colors } = useTheme();
-  const { todaysWords, pinnedWords, reviewQueue, allWords, togglePin, markReviewed } = useVocabulary();
-  const [activeTab, setActiveTab] = useState<Tab>('today');
-  const [expandedWord, setExpandedWord] = useState<string | null>(null);
-  const [reviewMode, setReviewMode] = useState(false);
-  const [reviewIndex, setReviewIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
-
-  const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: 'today', label: "Today's", count: todaysWords.length },
-    { key: 'pinned', label: 'Pinned', count: pinnedWords.length },
-    { key: 'review', label: 'Review', count: reviewQueue.length },
-    { key: 'all', label: 'All', count: allWords.length },
-  ];
-
-  const getActiveWords = (): VocabularyWord[] => {
-    switch (activeTab) {
-      case 'today': return todaysWords;
-      case 'pinned': return pinnedWords;
-      case 'review': return reviewQueue;
-      case 'all': return allWords;
-    }
-  };
-
-  const words = getActiveWords();
-
-  const handleReviewResponse = (quality: number) => {
-    if (reviewQueue.length > 0) {
-      markReviewed(reviewQueue[reviewIndex].id, quality);
-      setShowAnswer(false);
-      if (reviewIndex + 1 >= reviewQueue.length) {
-        setReviewMode(false);
-        setReviewIndex(0);
-      } else {
-        setReviewIndex(prev => prev + 1);
-      }
-    }
-  };
-
-  // Review Mode
-  if (reviewMode && reviewQueue.length > 0) {
-    const word = reviewQueue[reviewIndex];
-    return (
-      <div style={{ padding: '24px 16px 90px', maxWidth: '480px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <button onClick={() => { setReviewMode(false); setReviewIndex(0); }}
-            style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: colors.textSecondary }}>
-            ← Back
-          </button>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: colors.textSecondary }}>
-            {reviewIndex + 1} / {reviewQueue.length}
-          </span>
+const WordCard: React.FC<{ word: VocabularyWord; onPin: (id: string) => void }> = ({ word, onPin }) => {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <Card interactive style={{ padding: 18 }} onClick={() => setExpanded(e => !e)}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: 17 }}>{word.word}</h3>
+            <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>{word.partOfSpeech}</span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>{word.pronunciation}</span>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>{word.definition}</p>
         </div>
-
-        <Card style={{ textAlign: 'center', padding: '32px 24px' }}>
-          <p style={{ fontSize: '12px', color: colors.primary, fontWeight: 600, marginBottom: '8px' }}>
-            What does this word mean?
-          </p>
-          <h2 style={{ fontSize: '32px', fontWeight: 800, color: colors.text, margin: '0 0 8px' }}>
-            {word.word}
-          </h2>
-          <p style={{ fontSize: '14px', color: colors.textSecondary, marginBottom: '24px' }}>
-            {word.pronunciation}
-          </p>
-
-          {!showAnswer ? (
-            <Button onClick={() => setShowAnswer(true)} fullWidth>Show Answer</Button>
-          ) : (
-            <>
-              <div style={{
-                padding: '16px', borderRadius: '12px', background: colors.bgTertiary, marginBottom: '20px',
-                textAlign: 'left',
-              }}>
-                <p style={{ fontSize: '11px', color: colors.primary, fontWeight: 600, margin: '0 0 4px' }}>
-                  {word.partOfSpeech}
-                </p>
-                <p style={{ fontSize: '16px', color: colors.text, fontWeight: 600, margin: '0 0 8px' }}>
-                  {word.definition}
-                </p>
-                <p style={{ fontSize: '13px', color: colors.textSecondary, fontStyle: 'italic', margin: 0 }}>
-                  "{word.exampleSentences[0]}"
-                </p>
-              </div>
-              <p style={{ fontSize: '13px', color: colors.textSecondary, marginBottom: '12px' }}>
-                How well did you remember?
-              </p>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Button variant="secondary" onClick={() => handleReviewResponse(1)} fullWidth
-                  style={{ fontSize: '12px', background: `${colors.error}15`, color: colors.error, border: 'none' }}>
-                  Forgot
-                </Button>
-                <Button variant="secondary" onClick={() => handleReviewResponse(3)} fullWidth
-                  style={{ fontSize: '12px', background: `${colors.warning}15`, color: colors.warning, border: 'none' }}>
-                  Hard
-                </Button>
-                <Button variant="secondary" onClick={() => handleReviewResponse(4)} fullWidth
-                  style={{ fontSize: '12px', background: `${colors.accent}15`, color: colors.accent, border: 'none' }}>
-                  Good
-                </Button>
-                <Button variant="secondary" onClick={() => handleReviewResponse(5)} fullWidth
-                  style={{ fontSize: '12px', background: `${colors.success}15`, color: colors.success, border: 'none' }}>
-                  Easy
-                </Button>
-              </div>
-            </>
-          )}
-        </Card>
+        <button
+          onClick={e => { e.stopPropagation(); onPin(word.id); }}
+          aria-label={word.isPinned ? 'Unpin word' : 'Pin word'}
+          style={{
+            background: word.isPinned ? 'var(--accent-soft)' : 'var(--bg-subtle)',
+            border: 'none', borderRadius: 8, width: 32, height: 32, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+          }}
+        >
+          <Pin size={15} color={word.isPinned ? 'var(--accent)' : 'var(--text-tertiary)'} />
+        </button>
       </div>
+
+      {expanded && (
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+          {word.exampleSentences.map((ex, i) => (
+            <p key={i} style={{ fontSize: 13.5, color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 6 }}>
+              "{ex}"
+            </p>
+          ))}
+          <div style={{ display: 'flex', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
+            <p style={{ fontSize: 12.5 }}>
+              <span style={{ fontWeight: 700, color: 'var(--success)' }}>Synonyms: </span>
+              <span className="text-secondary">{word.synonyms.join(', ')}</span>
+            </p>
+            <p style={{ fontSize: 12.5 }}>
+              <span style={{ fontWeight: 700, color: 'var(--error)' }}>Antonyms: </span>
+              <span className="text-secondary">{word.antonyms.join(', ')}</span>
+            </p>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const ReviewSession: React.FC = () => {
+  const { reviewQueue, markReviewed } = useVocabulary();
+  const [revealed, setRevealed] = useState(false);
+  const [reviewedCount, setReviewedCount] = useState(0);
+
+  const current = reviewQueue[0];
+
+  if (!current) {
+    return (
+      <Card style={{ textAlign: 'center', padding: 40 }}>
+        <RotateCw size={28} color="var(--text-tertiary)" style={{ marginBottom: 12 }} />
+        <h3 style={{ marginBottom: 6 }}>{reviewedCount > 0 ? 'Review complete' : 'Nothing due for review'}</h3>
+        <p className="text-secondary" style={{ fontSize: 13.5 }}>
+          {reviewedCount > 0
+            ? `${reviewedCount} word${reviewedCount > 1 ? 's' : ''} reviewed — spaced repetition will bring them back at the right time.`
+            : 'Words you study come back for review on a spaced-repetition schedule.'}
+        </p>
+      </Card>
     );
   }
 
+  const grade = (quality: number) => {
+    markReviewed(current.id, quality);
+    setRevealed(false);
+    setReviewedCount(c => c + 1);
+  };
+
   return (
-    <div style={{ padding: '24px 16px 90px', maxWidth: '480px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: 800, color: colors.text, margin: '0 0 4px' }}>
-        Vocabulary
-      </h1>
-      <p style={{ fontSize: '14px', color: colors.textSecondary, margin: '0 0 20px' }}>
-        Learn new words every day
+    <Card style={{ textAlign: 'center', padding: 32 }}>
+      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
+        {reviewQueue.length} due — recall the meaning
+      </p>
+      <h2 style={{ fontSize: 30, marginBottom: 6 }}>{current.word}</h2>
+      <p style={{ fontSize: 13.5, color: 'var(--text-tertiary)', marginBottom: 24 }}>
+        <Volume2 size={13} style={{ verticalAlign: -2, marginRight: 5 }} />
+        {current.pronunciation} · {current.partOfSpeech}
       </p>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '20px' }}>
-        {tabs.map(tab => (
+      {!revealed ? (
+        <Button size="lg" onClick={() => setRevealed(true)}>Reveal definition</Button>
+      ) : (
+        <>
+          <p style={{ fontSize: 16, marginBottom: 8 }}>{current.definition}</p>
+          {current.exampleSentences[0] && (
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 24 }}>
+              "{current.exampleSentences[0]}"
+            </p>
+          )}
+          <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginBottom: 10 }}>How well did you remember it?</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, maxWidth: 420, margin: '0 auto' }}>
+            <Button variant="secondary" size="sm" style={{ color: 'var(--error)' }} onClick={() => grade(1)}>Again</Button>
+            <Button variant="secondary" size="sm" style={{ color: 'var(--warning)' }} onClick={() => grade(3)}>Hard</Button>
+            <Button variant="secondary" size="sm" onClick={() => grade(4)}>Good</Button>
+            <Button variant="secondary" size="sm" style={{ color: 'var(--success)' }} onClick={() => grade(5)}>Easy</Button>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+};
+
+const VocabularyPage: React.FC = () => {
+  const { todaysWords, reviewQueue, allWords, togglePin } = useVocabulary();
+  const [tab, setTab] = useState<Tab>('today');
+  const [search, setSearch] = useState('');
+
+  const filtered = allWords.filter(w =>
+    w.word.toLowerCase().includes(search.toLowerCase()) ||
+    w.definition.toLowerCase().includes(search.toLowerCase())
+  );
+  const sorted = [...filtered].sort((a, b) => Number(b.isPinned) - Number(a.isPinned) || a.word.localeCompare(b.word));
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'today', label: "Today's words" },
+    { id: 'review', label: reviewQueue.length > 0 ? `Review (${reviewQueue.length})` : 'Review' },
+    { id: 'all', label: `All (${allWords.length})` },
+  ];
+
+  return (
+    <div className="page">
+      <header className="page-header">
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Word program</p>
+        <h1 className="page-title">Vocabulary</h1>
+        <p className="page-subtitle">Daily words with spaced-repetition review — your edge over any other brain trainer.</p>
+      </header>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {tabs.map(t => (
           <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none',
-              background: activeTab === tab.key ? colors.primary : colors.bgTertiary,
-              color: activeTab === tab.key ? '#fff' : colors.textSecondary,
-              fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-            }}
+            key={t.id}
+            className={`badge ${tab === t.id ? 'badge-accent' : ''}`}
+            style={{ cursor: 'pointer', border: 'none', padding: '8px 16px', fontSize: 13 }}
+            onClick={() => setTab(t.id)}
           >
-            {tab.label} ({tab.count})
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* Review Button */}
-      {activeTab === 'review' && reviewQueue.length > 0 && (
-        <Card gradient={colors.gradient2} style={{ marginBottom: '16px', color: '#fff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px' }}>
-                {reviewQueue.length} words to review
-              </h3>
-              <p style={{ fontSize: '13px', opacity: 0.9, margin: 0 }}>
-                Spaced repetition for better retention
-              </p>
-            </div>
-            <Button onClick={() => setReviewMode(true)}
-              style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
-              Start
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Word List */}
-      {words.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px 0' }}>
-          <p style={{ fontSize: '48px', marginBottom: '12px' }}>📚</p>
-          <p style={{ fontSize: '15px', color: colors.textSecondary }}>
-            {activeTab === 'pinned' ? 'No pinned words yet. Pin words to save them for later!' :
-              activeTab === 'review' ? 'No words to review. Check back later!' :
-                'No words available.'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {words.map(word => {
-            const isExpanded = expandedWord === word.id;
-            return (
-              <Card key={word.id} padding="0">
-                <div
-                  onClick={() => setExpandedWord(isExpanded ? null : word.id)}
-                  style={{ padding: '14px 16px', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <h3 style={{ fontSize: '17px', fontWeight: 700, color: colors.text, margin: 0 }}>
-                          {word.word}
-                        </h3>
-                        <span style={{
-                          fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '4px',
-                          background: word.difficulty === 'advanced' ? `${colors.error}15` :
-                            word.difficulty === 'intermediate' ? `${colors.warning}15` : `${colors.success}15`,
-                          color: word.difficulty === 'advanced' ? colors.error :
-                            word.difficulty === 'intermediate' ? colors.warning : colors.success,
-                          textTransform: 'capitalize',
-                        }}>
-                          {word.difficulty}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '12px', color: colors.textSecondary, margin: '0 0 4px' }}>
-                        {word.pronunciation} · {word.partOfSpeech}
-                      </p>
-                      <p style={{ fontSize: '14px', color: colors.text, margin: 0, lineHeight: 1.4 }}>
-                        {word.definition}
-                      </p>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); togglePin(word.id); }}
-                      style={{
-                        background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer',
-                        padding: '4px', color: word.isPinned ? colors.warning : colors.textTertiary,
-                      }}
-                      aria-label={word.isPinned ? 'Unpin word' : 'Pin word'}
-                    >
-                      {word.isPinned ? '📌' : '📍'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded Content */}
-                {isExpanded && (
-                  <div style={{
-                    padding: '0 16px 16px', borderTop: `1px solid ${colors.border}`,
-                    paddingTop: '12px',
-                  }}>
-                    {/* Example Sentences */}
-                    <div style={{ marginBottom: '12px' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 600, color: colors.primary, margin: '0 0 6px' }}>
-                        Examples
-                      </p>
-                      {word.exampleSentences.map((ex, i) => (
-                        <p key={i} style={{
-                          fontSize: '13px', color: colors.textSecondary, margin: '0 0 4px',
-                          fontStyle: 'italic', lineHeight: 1.5, paddingLeft: '8px',
-                          borderLeft: `2px solid ${colors.primary}30`,
-                        }}>
-                          "{ex}"
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Synonyms */}
-                    <div style={{ marginBottom: '12px' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 600, color: colors.success, margin: '0 0 6px' }}>
-                        Synonyms
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {word.synonyms.map(s => (
-                          <span key={s} style={{
-                            fontSize: '12px', padding: '4px 10px', borderRadius: '6px',
-                            background: `${colors.success}15`, color: colors.success, fontWeight: 500,
-                          }}>
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Antonyms */}
-                    {word.antonyms.length > 0 && (
-                      <div>
-                        <p style={{ fontSize: '12px', fontWeight: 600, color: colors.error, margin: '0 0 6px' }}>
-                          Antonyms
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {word.antonyms.map(a => (
-                            <span key={a} style={{
-                              fontSize: '12px', padding: '4px 10px', borderRadius: '6px',
-                              background: `${colors.error}15`, color: colors.error, fontWeight: 500,
-                            }}>
-                              {a}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
+      {tab === 'today' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {todaysWords.map(w => {
+            const live = allWords.find(x => x.id === w.id) ?? w;
+            return <WordCard key={w.id} word={live} onPin={togglePin} />;
           })}
         </div>
+      )}
+
+      {tab === 'review' && <ReviewSession />}
+
+      {tab === 'all' && (
+        <>
+          <input
+            className="input"
+            placeholder="Search words…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ marginBottom: 16 }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {sorted.map(w => <WordCard key={w.id} word={w} onPin={togglePin} />)}
+            {sorted.length === 0 && (
+              <p className="text-tertiary" style={{ textAlign: 'center', padding: 24 }}>No words match your search.</p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

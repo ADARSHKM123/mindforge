@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { VocabularyWord } from '../types';
 import { getDailyWords } from '../data/vocabulary';
 import { getToday, calculateNextReview } from '../utils/helpers';
+import { storage } from '../core/storage';
 
 interface VocabularyContextType {
   todaysWords: VocabularyWord[];
@@ -13,14 +14,11 @@ interface VocabularyContextType {
 }
 
 function loadWords(): VocabularyWord[] {
-  try {
-    const saved = localStorage.getItem('mindforge-vocabulary');
-    return saved ? JSON.parse(saved) : [];
-  } catch { return []; }
+  return storage.get<VocabularyWord[]>('vocabulary', []);
 }
 
 function saveWords(words: VocabularyWord[]) {
-  localStorage.setItem('mindforge-vocabulary', JSON.stringify(words));
+  storage.set('vocabulary', words);
 }
 
 const VocabularyContext = createContext<VocabularyContextType>({
